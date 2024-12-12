@@ -1,4 +1,5 @@
 const { Storage } = require("@google-cloud/storage");
+const { Firestore } = require("@google-cloud/firestore");
 const axios = require("axios");
 const jwt = require("../utils/jwt");
 const admin = require("../firebase/admin");
@@ -190,4 +191,92 @@ const getCategoryMaterials = async (request, h, category) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getCategoryMaterials };
+// const getBankSoal = async (_request, h) => {
+//   try {
+//     const db = admin.firestore();
+
+//     console.log("Fetching data from Firestore collection: bankSoal");
+//     const snapshot = await db.collection('banksoal').get();
+
+//     console.log("Query snapshot size:", snapshot.size);
+//     if (snapshot.empty) {
+//       console.log("No documents found in 'banksoal' collection");
+//       return h.response({
+//         status: "success",
+//         data: [],
+//       }).code(200);
+//     }
+
+//     const data = snapshot.docs.map((doc) => {
+//       console.log("Document data:", doc.data());
+//       const docData = doc.data();
+//       return {
+//         id: doc.id,
+//         bankSoal: {
+//           answer: docData.answer || null,
+//           urlGuide: docData.urlGuide || null,
+//           urlImg: docData.urlImg || null,
+//         },
+//       };
+//     });
+
+//     console.log("Fetched data:", data);
+
+//     return h.response({
+//       status: "success",
+//       data,
+//     }).code(200);
+//   } catch (error) {
+//     console.error("Failed to retrieve bank soal:", error);
+//     return h.response({
+//       status: "fail",
+//       message: error.message || "Internal Server Error",
+//     }).code(500);
+//   }
+// };
+
+const getCollectionData = async (collectionName, _request, h) => {
+  try {
+    const db = new Firestore();
+
+    console.log(`Fetching data from Firestore collection: ${collectionName}`);
+    const snapshot = await db.collection(collectionName).get();
+
+    if (snapshot.empty) {
+      console.log(`No documents found in collection: ${collectionName}`);
+      return h.response({
+        status: "success",
+        data: [],
+      }).code(200);
+    }
+
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // console.log(`Fetched data from ${collectionName}:`, data);
+
+    return h.response({
+      status: "success",
+      data,
+    }).code(200);
+  } catch (error) {
+    console.error(`Failed to retrieve data from ${collectionName}:`, error);
+    return h.response({
+      status: "fail",
+      message: error.message || "Internal Server Error",
+    }).code(500);
+  }
+};
+
+const getBankSoal = (request, h) => {
+  return getCollectionData('banksoal', request, h);
+};
+
+const getQuestionWritting = (request, h) => {
+  return getCollectionData('questionWriting', request, h);
+};
+
+
+module.exports = { registerUser, loginUser, getCategoryMaterials, getBankSoal, getQuestionWritting  };

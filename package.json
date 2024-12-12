@@ -1,5 +1,5 @@
 {
-  "name": "latihan-kidzlearn-api",
+  "name": "kidzlearn-api",
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
@@ -16,6 +16,7 @@
     "@hapi/hapi": "^21.3.12",
     "@tensorflow/tfjs-node": "^4.22.0",
     "axios": "^1.7.8",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "firebase": "^11.0.2",
     "firebase-admin": "^13.0.1",

@@ -47,6 +47,27 @@ const routes = [
     handler: (request, h) =>
       handlers.getCategoryMaterials(request, h, "alphabetAnimation"),
   },
+  {
+    method: "GET",
+    path: "/dataSoalWritting",
+    handler: handlers.getBankSoal,
+  },
+  {
+    method: "GET",
+    path: "/dataQuestionWritting",
+    handler: handlers.getQuestionWritting,
+  },
+  // {
+  //   method: 'POST',
+  //   path: '/predict',
+  //   handler: handlers.postPredictHandler,
+  //   options: {
+  //     payload: {
+  //       allow: 'multipart/form-data',
+  //       multipart: true,
+  //     }
+  //   }
+  // },
 ];
 
 module.exports = routes;
