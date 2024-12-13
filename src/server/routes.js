@@ -1,4 +1,6 @@
 const handlers = require("../server/handler");
+const Formidable = require('formidable');
+const { getPrediction } = require('../services/inferenceService');
 
 const routes = [
   {
@@ -31,32 +33,58 @@ const routes = [
   },
   {
     method: "GET",
-    path: "/letterAnimation",
-    handler: (request, h) =>
-      handlers.getCategoryMaterials(request, h, "letterAnimation"),
+    path: "/questionWritting",
+    handler: handlers.getQuestionWritting,
   },
   {
     method: "GET",
-    path: "/alphabet",
-    handler: (request, h) =>
-      handlers.getCategoryMaterials(request, h, "alphabet"),
-  },
-  {
-    method: "GET",
-    path: "/alphabetAnimation",
-    handler: (request, h) =>
-      handlers.getCategoryMaterials(request, h, "alphabetAnimation"),
-  },
-  {
-    method: "GET",
-    path: "/dataSoalWritting",
+    path: "/bankSoal",
     handler: handlers.getBankSoal,
   },
   {
-    method: "GET",
-    path: "/dataQuestionWritting",
-    handler: handlers.getQuestionWritting,
-  },
+    method: 'POST',
+    path: '/predict',
+    options: {
+        payload: {
+            allow: 'multipart/form-data',
+            multipart: true,
+            output: 'stream',
+            parse: false,
+        },
+    },
+    handler: async (request, h) => {
+        const form = new Formidable.IncomingForm();
+
+        return new Promise((resolve) => {
+            form.parse(request.raw.req, async (err, fields, files) => {
+                if (err) {
+                    console.error('Form parsing error:', err);
+                    return resolve(
+                        h.response({ status: 'fail', message: 'File upload failed' }).code(400)
+                    );
+                }
+
+                console.log('Files:', files);
+                console.log('Fields:', fields);
+
+                try {
+                    const fileObject = files.image[0];
+                    if (!fileObject || !fileObject.filepath) {
+                        throw new Error('Uploaded file is missing or invalid.');
+                    }
+
+                    const filePath = fileObject.filepath;
+                    const isLetter = fields.is_letter[0] === 'true';
+                    const result = await getPrediction(filePath, isLetter);
+                    resolve(h.response(result).code(200));
+                } catch (error) {
+                    console.error('Error:', error);
+                    resolve(h.response({ status: 'fail', message: error.message }).code(500));
+                }
+            });
+        });
+    },
+},
   // {
   //   method: 'POST',
   //   path: '/predict',

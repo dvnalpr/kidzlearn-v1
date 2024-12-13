@@ -1,33 +1,38 @@
-// const tf = require('@tensorflow/tfjs-node');
-// const InputError = require('../exceptions/InputError');
+const FormData = require('form-data');
+const fs = require('fs');
+const axios = require('axios');
+const admin = require('../firebase/admin')
 
-// async function predictClassification(model, image) {
-//   if (!Buffer.isBuffer(image)) {
-//     throw new InputError('Uploaded file is not an image.');
-//   }
+const ML_SERVICE_URL = 'http://0.0.0.0:5000/predict';
 
-//   try {
-//     const tensor = tf.node
-//       .decodeImage(image)
-//       .resizeNearestNeighbor([224, 224])
-//       .expandDims()
-//       .toFloat();
+const getPrediction = async (filePath, isLetter) => {
+    const form = new FormData();
+    form.append('image', fs.createReadStream(filePath));
+    form.append('is_letter', isLetter ? 'true' : 'false');
 
-//     const prediction = model.predict(tensor);
-//     const scores = await prediction.data();
-//     const confidenceScore = Math.max(...scores) * 100;
+    try {
+        const db = admin.firestore();
+        const response = await axios.post(ML_SERVICE_URL, form, {
+            headers: form.getHeaders(),
+        });
+        
+        const result = response.data;
 
-//     // Determine result (e.g., letter or number)
-//     const index = scores.indexOf(Math.max(...scores));
-//     const result = model.labels[index]; // Labels should be pre-defined in model
+        await db.collection('predictions').add({
+            predicted_char: result.predicted_char,
+            probabilities: result.probabilities,
+            is_letter: isLetter,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),  // Automatically set createdAt
+        });
 
-//     tensor.dispose();
-//     prediction.dispose();
+        console.log("Prediction saved to Firestore:", result);
+        return result;
 
-//     return { confidenceScore, result };
-//   } catch (error) {
-//     throw new InputError(`Error during inference: ${error.message}`);
-//   }
-// }
+    } catch (error) {
+        console.error('Error in ML service:', error.message);
+        const backendMessage = error.response?.data?.error || 'Unknown error from backend';
+        throw new Error(`Prediction service failed: ${backendMessage}`);
+    }
+};
 
-// module.exports = predictClassification;
+module.exports = { getPrediction };
