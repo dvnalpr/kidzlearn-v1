@@ -42,6 +42,11 @@ const routes = [
     handler: handlers.getBankSoal,
   },
   {
+    method: "POST",
+    path: "/update-progress",
+    handler: handlers.updateExp,
+  },
+  {
     method: 'POST',
     path: '/predict',
     options: {

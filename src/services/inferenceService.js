@@ -3,7 +3,7 @@ const fs = require('fs');
 const axios = require('axios');
 const admin = require('../firebase/admin')
 
-const ML_SERVICE_URL = 'http://0.0.0.0:5000/predict';
+const ML_SERVICE_URL = 'https://kidzlearn-ml-365212599966.asia-southeast2.run.app/predict';
 
 const getPrediction = async (filePath, isLetter) => {
     const form = new FormData();

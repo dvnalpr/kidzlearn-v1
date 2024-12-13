@@ -41,6 +41,15 @@ const registerUser = async (request, h) => {
       displayName: username,
     });
 
+    const db = admin.firestore();
+    await db.collection('users').doc(userRecord.uid).set({
+      email,
+      username,
+      exp: 0,       // Initialize exp
+      level: 1,     // Initialize level
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
     const token = jwt.generateToken({ uid: userRecord.uid, email });
 
     return h
@@ -70,7 +79,18 @@ const loginUser = async (request, h) => {
 
     // Retrieve the user's Firebase record to get additional information
     const userRecord = await admin.auth().getUserByEmail(email);
-    const username = userRecord.displayName || "";
+    const userId = userRecord.uid; // Get the user's unique ID (uid)
+
+    const db = admin.firestore();
+    const userDoc = await db.collection('users').doc(userRecord.uid).get();
+
+    if (!userDoc.exists) {
+      return h.response({ error: "User data not found" }).code(404);
+    }
+
+    const userData = userDoc.data();
+
+
 
     // Generate a custom JWT token
     const token = jwt.generateToken({ email });
@@ -78,9 +98,12 @@ const loginUser = async (request, h) => {
     return h
       .response({
         message: "Login successful",
+        userId,
         email,
-        username,
+        username: userRecord.displayName || "",
         token,
+        exp: userData.exp, // Include exp
+        level: userData.level, // Include level
       })
       .code(200);
   } catch (error) {
@@ -278,5 +301,70 @@ const getQuestionWritting = (request, h) => {
   return getCollectionData('questionWriting', request, h);
 };
 
+const updateUserProgress = async (userId, expGained, levelGained) => {
+  const db = admin.firestore();
 
-module.exports = { registerUser, loginUser, getCategoryMaterials, getBankSoal, getQuestionWritting  };
+  try {
+    // Fetch the user's current data
+    const userDoc = await db.collection('users').doc(userId).get();
+
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    let { exp, level } = userData;
+
+    // Add the gained experience
+    exp += expGained;
+    level += levelGained;
+
+    // Recalculate level (assuming level-up every 100 exp)
+    // const newLevel = Math.floor(exp / 100) + 1;
+
+    // Update Firestore with new exp and level
+    await db.collection('users').doc(userId).update({
+      exp,
+      level,
+    });
+
+    console.log(`Updated user progress: exp=${exp}, level=${level}`);
+    return { exp, level };
+  } catch (error) {
+    console.error("Error updating user progress:", error.message);
+    throw new Error("Could not update user progress");
+  }
+};
+
+const updateExp = async (request, h) => {
+  const { userId, expGained, levelGained } = request.payload;
+
+  // Validate input
+  if (typeof expGained !== "number" || expGained < 0 || typeof levelGained !== "number" || levelGained < 0) {
+    return h
+      .response({ error: "Invalid expGained or levelGained value" })
+      .code(400);
+  }
+
+  try {
+    // Update user progress
+    const progress = await updateUserProgress(userId, expGained, levelGained);
+
+    return h
+      .response({
+        message: "Progress updated successfully",
+        exp: progress.exp,
+        level: progress.level,
+      })
+      .code(200);
+  } catch (error) {
+    console.error("Error completing question:", error.message);
+    return h
+      .response({ error: "Could not update progress" })
+      .code(500);
+  }
+};
+
+
+
+module.exports = { registerUser, loginUser, getCategoryMaterials, getBankSoal, getQuestionWritting, updateExp  };
